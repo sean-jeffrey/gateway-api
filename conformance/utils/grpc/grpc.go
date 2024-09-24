@@ -46,7 +46,6 @@ const (
 // This can be overridden with custom implementations whenever necessary.
 type Client interface {
 	SendRPC(t *testing.T, address string, expected ExpectedResponse, timeout time.Duration) (*Response, error)
-	Close()
 }
 
 // DefaultClient is the default implementation of Client. It will
@@ -271,9 +270,11 @@ func MakeRequestAndExpectEventuallyConsistentResponse(t *testing.T, c Client, ti
 	t.Helper()
 	validateExpectedResponse(t, expected)
 	if c == nil {
-		c = &DefaultClient{Conn: nil}
+		defaultClient := &DefaultClient{Conn: nil}
+		defer defaultClient.Close()
+		c = defaultClient
 	}
-	defer c.Close()
+
 	sendRPC := func(elapsed time.Duration) bool {
 		resp, err := c.SendRPC(t, gwAddr, expected, timeoutConfig.MaxTimeToConsistency-elapsed)
 		if err != nil {
